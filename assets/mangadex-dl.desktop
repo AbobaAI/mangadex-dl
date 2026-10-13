@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=MangaDex DL
+GenericName=Manga Downloader
+Comment=Поиск и скачивание манги с MangaDex
+Exec=mangadex-dl
+Icon=mangadex-dl
+Terminal=false
+Categories=Network;Graphics;
+Keywords=manga;mangadex;download;манга;
+StartupWMClass=mangadex-dl

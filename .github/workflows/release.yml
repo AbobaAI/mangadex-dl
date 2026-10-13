@@ -37,6 +37,13 @@ jobs:
             cp target/release/mangadex-dl.exe "upload/${{ matrix.archive }}.exe"
           else
             cp target/release/mangadex-dl "upload/${{ matrix.archive }}"
+            pkg="${{ matrix.archive }}"
+            mkdir -p "$pkg"
+            cp target/release/mangadex-dl "$pkg/"
+            cp assets/mangadex-dl.desktop assets/mangadex-dl.svg "$pkg/"
+            cp assets/mangadex-dl-512.png "$pkg/mangadex-dl.png"
+            tar -czf "upload/$pkg.tar.gz" "$pkg"
+            cp assets/mangadex-dl.desktop assets/mangadex-dl-512.png upload/
           fi
       - uses: actions/upload-artifact@v4
         with:

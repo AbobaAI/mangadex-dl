@@ -49,7 +49,7 @@
 | Система | Файл |
 | --- | --- |
 | Windows 10/11 x64 | `mangadex-dl-windows-x64.exe` |
-| Linux x64 | `mangadex-dl-linux-x64` |
+| Linux x64 | `mangadex-dl-linux-x64` или `mangadex-dl-linux-x64.tar.gz` (с иконкой и ярлыком) |
 
 **Windows:** просто запустите `.exe`. SmartScreen может предупредить о неизвестном издателе — «Подробнее» → «Выполнить в любом случае».
 
@@ -58,6 +58,15 @@
 ```bash
 chmod +x mangadex-dl-linux-x64
 ./mangadex-dl-linux-x64
+```
+
+Чтобы программа появилась в меню приложений с иконкой, возьмите архив:
+
+```bash
+tar -xzf mangadex-dl-linux-x64.tar.gz && cd mangadex-dl-linux-x64
+install -Dm755 mangadex-dl ~/.local/bin/mangadex-dl
+install -Dm644 mangadex-dl.png ~/.local/share/icons/hicolor/512x512/apps/mangadex-dl.png
+install -Dm644 mangadex-dl.desktop ~/.local/share/applications/mangadex-dl.desktop
 ```
 
 ### Сборка из исходников

@@ -231,7 +231,12 @@ pub fn run(lang: &str, out: &Path, saver: bool) -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([880.0, 960.0])
-            .with_min_inner_size([420.0, 560.0]),
+            .with_min_inner_size([420.0, 560.0])
+            .with_app_id("mangadex-dl")
+            .with_icon(
+                eframe::icon_data::from_png_bytes(include_bytes!("../assets/mangadex-dl-256.png"))
+                    .unwrap_or_default(),
+            ),
         ..Default::default()
     };
     eframe::run_native(
