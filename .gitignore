@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+downloads/
+dist/
+build/
+*.spec
+*.part

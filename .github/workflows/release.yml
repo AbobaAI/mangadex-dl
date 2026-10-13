@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            archive: mangadex-dl-linux-x64
+          - os: windows-latest
+            archive: mangadex-dl-windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest -v
+      - run: python -m pip install pyinstaller
+      - name: Build
+        shell: bash
+        run: |
+          pyinstaller --onefile --clean --name mangadex-dl mangadex_dl.py
+          mkdir -p upload
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            mv dist/mangadex-dl.exe "upload/${{ matrix.archive }}.exe"
+          else
+            mv dist/mangadex-dl "upload/${{ matrix.archive }}"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: upload/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Сборки для Windows и Linux. Исходный скрипт запускается через Python 3.10+ без дополнительных пакетов."
