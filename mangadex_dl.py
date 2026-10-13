@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import re
+import ssl
 import sys
 import time
 import unicodedata
@@ -25,7 +26,7 @@ from urllib.request import Request, urlopen
 API = "https://api.mangadex.org"
 REPORT_URL = "https://api.mangadex.network/report"
 USER_AGENT = (
-    "mangadex-dl/1.0.0 (personal non-commercial client; "
+    "mangadex-dl/1.0.1 (personal non-commercial client; "
     "+https://github.com/AbobaAI/mangadex-dl)"
 )
 CONTENT_RATINGS = ("safe", "suggestive", "erotica", "pornographic")
@@ -452,10 +453,19 @@ def retry_delay(headers: Any, attempt: int) -> float:
     return min(8.0, 0.8 * (2**attempt))
 
 
+def ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 class Client:
     def __init__(self) -> None:
         self.api_limiter = Limiter(0.25)
         self.image_limiter = Limiter(0.2)
+        self.ssl_context = ssl_context()
 
     def get_json(self, url: str) -> dict[str, Any]:
         status, _headers, body = self._request(
@@ -496,7 +506,7 @@ class Client:
                 hdrs.update(headers)
             request = Request(url, data=data, headers=hdrs, method=method)
             try:
-                with urlopen(request, timeout=timeout) as response:
+                with urlopen(request, timeout=timeout, context=self.ssl_context) as response:
                     return response.status, response.headers, response.read()
             except HTTPError as exc:
                 body = exc.read()
@@ -604,7 +614,7 @@ class Client:
             },
         )
         try:
-            with urlopen(request, timeout=120) as response:
+            with urlopen(request, timeout=120, context=self.ssl_context) as response:
                 data = response.read()
                 elapsed = int((time.monotonic() - started) * 1000)
                 content_type = response.headers.get("Content-Type") or ""
@@ -948,7 +958,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list", action="store_true", help="показать главы и выйти")
     parser.add_argument("--force", action="store_true", help="скачать страницы заново")
     parser.add_argument("--pick", type=int, help="номер тайтла в результатах поиска, с 1")
-    parser.add_argument("--version", action="version", version="mangadex-dl 1.0.0")
+    parser.add_argument("--version", action="version", version="mangadex-dl 1.0.1")
     return parser
 
 
