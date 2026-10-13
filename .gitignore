@@ -1,3 +1,9 @@
 /target/
 downloads/
 *.part
+.env
+.env.*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

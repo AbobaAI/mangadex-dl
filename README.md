@@ -1,18 +1,66 @@
-# mangadex-dl
+<div align="center">
 
-Небольшая программа для личного некоммерческого чтения: скачивает страницы выбранного тайтла и главы с [MangaDex](https://mangadex.org) через официальный API.
+# 📚 mangadex-dl
 
-Один и тот же код собирается для Windows и Linux. В релизах GitHub лежат готовые файлы `mangadex-dl-windows-x64.exe` и `mangadex-dl-linux-x64`.
+**Личный некоммерческий загрузчик страниц глав с [MangaDex](https://mangadex.org). Windows и Linux.**
 
-Без аргументов открывается обычное окно: поиск тайтла, отметки глав и ход загрузки. Браузер и локальный сервер не используются. `--cli` оставляет вопросы в терминале, флаги `-c`, `--list` и ссылка на тайтл тоже работают из командной строки.
+[![Release](https://img.shields.io/github/v/release/AbobaAI/mangadex-dl?style=flat-square&color=e0866b)](https://github.com/AbobaAI/mangadex-dl/releases/latest)
+[![Tests](https://img.shields.io/github/actions/workflow/status/AbobaAI/mangadex-dl/test.yml?style=flat-square&label=tests)](https://github.com/AbobaAI/mangadex-dl/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational?style=flat-square)
+![Rust](https://img.shields.io/badge/Rust-1.95%2B-orange?style=flat-square&logo=rust)
 
-Страницы сохраняются на диск. Программа делает паузу между запросами и сообщает сети MangaDex@Home, как прошла загрузка каждой страницы.
+<img src="docs/screenshots/gui.png" alt="Окно mangadex-dl: тайтл и список глав" width="820">
 
-## Личное использование
+</div>
 
-Инструмент предназначен для личного некоммерческого чтения глав, которые вы и так открываете на MangaDex. Авторские права на мангу остаются у правообладателей.
+Ищете тайтл, отмечаете главы, жмёте «Скачать» — страницы ложатся в папку на диске. Работает через официальный API MangaDex, одним файлом без установки: есть обычное окно и режим командной строки.
 
-## Сборка из исходников
+## ✨ Возможности
+
+- 🪟 **Нативное окно** — поиск, обложки, выбор языка перевода, отметка глав и прогресс загрузки. Без браузера и локального сервера.
+- ⌨️ **Командная строка** — те же действия флагами или вопросами в терминале (`--cli`).
+- 🔗 **Принимает что угодно** — название, ссылку на тайтл или ссылку на конкретную главу.
+- 🎯 **Гибкий выбор глав** — `12`, `1-5`, `1,3,8`, `all`, `#2`, `oneshot`, фильтр по тому.
+- 🌍 **Любой язык перевода** — по умолчанию русский; если глав нет, программа покажет доступные языки.
+- 🔁 **Докачка** — повторный запуск пропускает уже скачанные страницы, `--force` качает заново.
+- 🗜️ **Сжатые страницы** — `--saver` для экономии трафика и места.
+- 🤝 **Бережно к сайту** — паузы между запросами и отчёты сети MangaDex@Home о каждой странице.
+
+## 📸 Как это выглядит
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/cli-list.svg" alt="Список глав в терминале"></td>
+<td width="50%"><img src="docs/screenshots/cli-download.svg" alt="Скачивание главы в терминале"></td>
+</tr>
+<tr>
+<td align="center"><sub>Список глав тома: <code>--list -v 1</code></sub></td>
+<td align="center"><sub>Скачивание одной главы: <code>-c 7</code></sub></td>
+</tr>
+</table>
+
+## 📦 Установка
+
+### Готовые сборки
+
+Скачайте файл для своей системы со страницы [Releases](https://github.com/AbobaAI/mangadex-dl/releases/latest):
+
+| Система | Файл |
+| --- | --- |
+| Windows 10/11 x64 | `mangadex-dl-windows-x64.exe` |
+| Linux x64 | `mangadex-dl-linux-x64` |
+
+**Windows:** просто запустите `.exe`. SmartScreen может предупредить о неизвестном издателе — «Подробнее» → «Выполнить в любом случае».
+
+**Linux:**
+
+```bash
+chmod +x mangadex-dl-linux-x64
+./mangadex-dl-linux-x64
+```
+
+### Сборка из исходников
 
 Нужен Rust 1.95 или новее.
 
@@ -22,62 +70,62 @@ cd mangadex-dl
 cargo build --release
 ```
 
-На Linux для окна нужны библиотеки Wayland, X11 и Vulkan, которые обычно уже стоят на рабочем столе. Если линковка просит пакеты, на Debian и Ubuntu их ставят так:
+Готовый файл: `target/release/mangadex-dl` (Linux) или `target\release\mangadex-dl.exe` (Windows).
+
+На Linux окну нужны библиотеки Wayland, X11 и Vulkan — на рабочем столе они обычно уже есть. Если линковка просит пакеты (Debian/Ubuntu):
 
 ```bash
-sudo apt-get install pkg-config libwayland-dev libxkbcommon-dev libvulkan-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+sudo apt-get install pkg-config libwayland-dev libxkbcommon-dev libvulkan-dev \
+  libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
 ```
 
-Готовый файл:
+## 🚀 Использование
 
-- Linux: `target/release/mangadex-dl`
-- Windows: `target/release/mangadex-dl.exe`
-
-## Как пользоваться
-
-Окно:
+Без аргументов открывается окно:
 
 ```bash
-cargo run --release
+mangadex-dl
 ```
 
-Тот же сценарий в терминале:
+Тот же сценарий вопросами в терминале:
 
 ```bash
-cargo run --release -- --cli
+mangadex-dl --cli
 ```
 
-Одна глава на русском:
+Примеры командной строки:
 
 ```bash
-cargo run --release -- "Ёцуба" -c 1 -l ru
+# Одна глава на русском
+mangadex-dl "Ёцуба" -c 1 -l ru
+
+# Главы 1–5 в английском переводе, в свою папку
+mangadex-dl "https://mangadex.org/title/UUID" -c 1-5 -l en -o ~/Manga
+
+# Только посмотреть список глав
+mangadex-dl "https://mangadex.org/title/UUID" --list -l ru
+
+# Конкретная глава по ссылке
+mangadex-dl "https://mangadex.org/chapter/UUID"
+
+# Сжатые страницы
+mangadex-dl "Название" -c 12 --saver
 ```
 
-Несколько глав, английский перевод, своя папка:
+### Флаги
 
-```bash
-cargo run --release -- "https://mangadex.org/title/UUID" -c 1-5 -l en -o ~/Manga
-```
-
-Список глав без скачивания:
-
-```bash
-cargo run --release -- "https://mangadex.org/title/UUID" --list -l ru
-```
-
-Конкретная глава по ссылке:
-
-```bash
-cargo run --release -- "https://mangadex.org/chapter/UUID"
-```
-
-Сжатые страницы:
-
-```bash
-cargo run --release -- "Название" -c 12 --saver
-```
-
-Повторный запуск пропускает уже скачанные файлы. `--force` скачивает их заново.
+| Флаг | Что делает | По умолчанию |
+| --- | --- | --- |
+| `TARGET` | название, ссылка на тайтл или главу | — |
+| `-c`, `--chapter` | какие главы скачать | спросит |
+| `-l`, `--lang` | язык перевода | `ru` |
+| `-v`, `--volume` | только этот том | все |
+| `-o`, `--out` | папка для страниц | `downloads` |
+| `--saver` | сжатые страницы | выкл. |
+| `--list` | показать главы и выйти | — |
+| `--force` | скачать страницы заново | выкл. |
+| `--pick N` | номер тайтла в результатах поиска | — |
+| `--cli` | вопросы в терминале вместо окна | — |
 
 ### Как указать главы
 
@@ -90,34 +138,62 @@ cargo run --release -- "Название" -c 12 --saver
 | `#2` | вторая строка списка, даже если у номера главы несколько переводов |
 | `oneshot` | глава без номера |
 
-`-v 2` оставляет только выбранный том. `-l` задаёт язык перевода, по умолчанию `ru`. Если на этом языке глав нет, программа показывает доступные языки.
-
-Если у номера главы несколько групп, скачивается самый свежий перевод. Остальные видны в списке как `#номер`.
+Если у номера главы несколько групп, скачивается самый свежий перевод, остальные видны в списке как `#номер`.
 
 ### Куда складываются страницы
 
 ```text
 downloads/
-  Название/
-    ru/
-      v1-c001 [Группа]/
-        001.png
-        002.png
+└── Ёцуба!/
+    └── ru/
+        └── v1-c007 [az228]/
+            ├── 001.jpg
+            ├── 002.jpg
+            └── …
 ```
 
 Если у главы нет группы переводчиков, в имени папки будет имя загрузившего главу.
 
-## Готовые сборки
+## ❓ FAQ и ограничения
 
-Тег `v*` запускает сборку в GitHub Actions:
+<details>
+<summary><b>Почему загрузка не мгновенная?</b></summary>
 
-- `mangadex-dl-linux-x64`
-- `mangadex-dl-windows-x64.exe`
+Программа специально делает паузы между запросами, чтобы не нагружать MangaDex и не попасть под ограничения API. Глава на ~20 страниц качается несколько минут.
+</details>
 
-На Linux файлу нужен бит исполнения: `chmod +x mangadex-dl-linux-x64`.
+<details>
+<summary><b>Глава есть на сайте, но не скачивается</b></summary>
 
-## Проверки
+Часть глав на MangaDex — внешние ссылки на сайты издателей (в списке помечены «внешняя ссылка»). Их страниц на MangaDex нет, и скачать их нельзя.
+</details>
+
+<details>
+<summary><b>Нет глав на нужном языке</b></summary>
+
+Программа покажет, на каких языках есть переводы. Укажите другой через `-l`, например `-l en`.
+</details>
+
+<details>
+<summary><b>Можно ли скачивать в CBZ/PDF?</b></summary>
+
+Пока нет: страницы сохраняются как есть, отдельными изображениями.
+</details>
+
+## ⚖️ Правовая оговорка
+
+Инструмент предназначен **только для личного некоммерческого чтения** глав, которые вы и так можете открыть на MangaDex. Авторские права на мангу принадлежат правообладателям и переводчикам. Не распространяйте скачанное и соблюдайте [правила MangaDex](https://mangadex.org/about) и [условия API](https://api.mangadex.org/docs/). Проект не связан с MangaDex.
+
+Если нравится тайтл — поддержите авторов, купив официальное издание.
+
+## 🧪 Разработка
 
 ```bash
 cargo test
 ```
+
+Тег `v*` запускает сборку релиза в GitHub Actions для Windows и Linux.
+
+## 📄 Лицензия
+
+[MIT](LICENSE) © 2026 AbobaAI
