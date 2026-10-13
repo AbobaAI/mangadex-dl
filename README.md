@@ -2,9 +2,9 @@
 
 Небольшая программа для личного некоммерческого чтения: скачивает страницы выбранного тайтла и главы с [MangaDex](https://mangadex.org) через официальный API.
 
-Один и тот же скрипт работает на Windows и Linux. Отдельные пакеты не нужны: достаточно Python 3.10 или новее. В релизах GitHub лежат готовые файлы `mangadex-dl-windows-x64.exe` и `mangadex-dl-linux-x64`.
+Один и тот же код собирается для Windows и Linux. В релизах GitHub лежат готовые файлы `mangadex-dl-windows-x64.exe` и `mangadex-dl-linux-x64`.
 
-Без аргументов программа открывает минималистичный интерфейс в браузере: поиск тайтла, отметки глав и ход загрузки. Сервер слушает только этот компьютер. `--cli` оставляет вопросы в терминале.
+Без аргументов открывается обычное окно: поиск тайтла, отметки глав и ход загрузки. Браузер и локальный сервер не используются. `--cli` оставляет вопросы в терминале, флаги `-c`, `--list` и ссылка на тайтл тоже работают из командной строки.
 
 Страницы сохраняются на диск. Программа делает паузу между запросами и сообщает сети MangaDex@Home, как прошла загрузка каждой страницы.
 
@@ -12,69 +12,69 @@
 
 Инструмент предназначен для личного некоммерческого чтения глав, которые вы и так открываете на MangaDex. Авторские права на мангу остаются у правообладателей.
 
-## Установка из исходников
+## Сборка из исходников
+
+Нужен Rust 1.95 или новее.
 
 ```bash
 git clone https://github.com/AbobaAI/mangadex-dl.git
 cd mangadex-dl
+cargo build --release
 ```
 
-Linux:
+На Linux для окна нужны библиотеки Wayland, X11 и Vulkan, которые обычно уже стоят на рабочем столе. Если линковка просит пакеты, на Debian и Ubuntu их ставят так:
 
 ```bash
-python3 mangadex_dl.py --help
+sudo apt-get install pkg-config libwayland-dev libxkbcommon-dev libvulkan-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
 ```
 
-Windows, в cmd или PowerShell, из папки программы:
+Готовый файл:
 
-```bat
-mangadex-dl.bat --help
-```
-
-Если `py` установлен, bat-файл вызывает его. Иначе вызывается `python`.
+- Linux: `target/release/mangadex-dl`
+- Windows: `target/release/mangadex-dl.exe`
 
 ## Как пользоваться
 
-Интерфейс:
+Окно:
 
 ```bash
-python3 mangadex_dl.py
+cargo run --release
 ```
 
 Тот же сценарий в терминале:
 
 ```bash
-python3 mangadex_dl.py --cli
+cargo run --release -- --cli
 ```
 
 Одна глава на русском:
 
 ```bash
-python3 mangadex_dl.py "Ёцуба" -c 1 -l ru
+cargo run --release -- "Ёцуба" -c 1 -l ru
 ```
 
 Несколько глав, английский перевод, своя папка:
 
 ```bash
-python3 mangadex_dl.py "https://mangadex.org/title/UUID" -c 1-5 -l en -o ~/Manga
+cargo run --release -- "https://mangadex.org/title/UUID" -c 1-5 -l en -o ~/Manga
 ```
 
 Список глав без скачивания:
 
 ```bash
-python3 mangadex_dl.py "https://mangadex.org/title/UUID" --list -l ru
+cargo run --release -- "https://mangadex.org/title/UUID" --list -l ru
 ```
 
 Конкретная глава по ссылке:
 
 ```bash
-python3 mangadex_dl.py "https://mangadex.org/chapter/UUID"
+cargo run --release -- "https://mangadex.org/chapter/UUID"
 ```
 
 Сжатые страницы:
 
 ```bash
-python3 mangadex_dl.py "Название" -c 12 --saver
+cargo run --release -- "Название" -c 12 --saver
 ```
 
 Повторный запуск пропускает уже скачанные файлы. `--force` скачивает их заново.
@@ -105,6 +105,8 @@ downloads/
         002.png
 ```
 
+Если у главы нет группы переводчиков, в имени папки будет имя загрузившего главу.
+
 ## Готовые сборки
 
 Тег `v*` запускает сборку в GitHub Actions:
@@ -117,5 +119,5 @@ downloads/
 ## Проверки
 
 ```bash
-python3 -m unittest -v
+cargo test
 ```
