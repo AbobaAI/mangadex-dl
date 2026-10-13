@@ -26,7 +26,7 @@ from urllib.request import Request, urlopen
 API = "https://api.mangadex.org"
 REPORT_URL = "https://api.mangadex.network/report"
 USER_AGENT = (
-    "mangadex-dl/1.0.1 (personal non-commercial client; "
+    "mangadex-dl/1.1.0 (personal non-commercial client; "
     "+https://github.com/AbobaAI/mangadex-dl)"
 )
 CONTENT_RATINGS = ("safe", "suggestive", "erotica", "pornographic")
@@ -51,6 +51,10 @@ class ApiError(Exception):
         self.status = status
 
 
+class Cancelled(Exception):
+    pass
+
+
 @dataclass
 class Manga:
     id: str
@@ -61,6 +65,7 @@ class Manga:
     original_language: str | None
     languages: tuple[str, ...]
     aliases: tuple[str, ...]
+    cover: str | None = None
 
 
 @dataclass
@@ -322,6 +327,19 @@ def all_aliases(attributes: dict[str, Any]) -> tuple[str, ...]:
     return tuple(found)
 
 
+def cover_url(obj: dict[str, Any]) -> str | None:
+    manga_id = obj.get("id")
+    if not manga_id:
+        return None
+    for relation in obj.get("relationships") or []:
+        if relation.get("type") != "cover_art":
+            continue
+        filename = (relation.get("attributes") or {}).get("fileName")
+        if filename:
+            return f"https://uploads.mangadex.org/covers/{manga_id}/{filename}.256.jpg"
+    return None
+
+
 def parse_manga(obj: dict[str, Any], lang: str) -> Manga:
     attributes = obj.get("attributes") or {}
     titles = collect_titles(attributes)
@@ -337,6 +355,7 @@ def parse_manga(obj: dict[str, Any], lang: str) -> Manga:
         original_language=attributes.get("originalLanguage"),
         languages=languages,
         aliases=all_aliases(attributes),
+        cover=cover_url(obj),
     )
 
 
@@ -531,7 +550,7 @@ class Client:
         raise ApiError(f"сеть: {last_error}")
 
     def get_manga(self, manga_id: str, lang: str) -> Manga:
-        payload = self.get_json(f"{API}/manga/{manga_id}")
+        payload = self.get_json(f"{API}/manga/{manga_id}?includes[]=cover_art")
         return parse_manga(payload["data"], lang)
 
     def search(self, title: str, lang: str) -> tuple[list[Manga], int]:
@@ -539,6 +558,7 @@ class Client:
             ("title", title),
             ("limit", "15"),
             ("order[relevance]", "desc"),
+            ("includes[]", "cover_art"),
             *rating_params(),
         ]
         payload = self.get_json(f"{API}/manga?{urlencode(params)}")
@@ -602,7 +622,7 @@ class Client:
             raise ApiError("MangaDex не выдал сервер для страниц")
         return payload
 
-    def fetch_image(self, url: str) -> tuple[bool, bytes, Any, int]:
+    def fetch_image(self, url: str, should_stop: Any = None) -> tuple[bool, bytes, Any, int]:
         self.image_limiter.wait()
         started = time.monotonic()
         request = Request(
@@ -615,7 +635,15 @@ class Client:
         )
         try:
             with urlopen(request, timeout=120, context=self.ssl_context) as response:
-                data = response.read()
+                chunks: list[bytes] = []
+                while True:
+                    if should_stop and should_stop():
+                        raise Cancelled()
+                    block = response.read(64 * 1024)
+                    if not block:
+                        break
+                    chunks.append(block)
+                data = b"".join(chunks)
                 elapsed = int((time.monotonic() - started) * 1000)
                 content_type = response.headers.get("Content-Type") or ""
                 ok = response.status == 200 and looks_like_image(data, content_type)
@@ -768,8 +796,26 @@ def download_chapter(
     *,
     saver: bool,
     force: bool,
+    on_page: Any = None,
+    should_stop: Any = None,
 ) -> DownloadResult:
     label = chapter.number or "oneshot"
+
+    def report_page(index: int, total: int, state: str) -> None:
+        if should_stop and should_stop():
+            raise Cancelled()
+        if on_page:
+            on_page(index, total, state)
+            return
+        if state == "failed":
+            print(f"\nГлава {label}, страница {index}: не скачалась")
+            return
+        line = f"  {index}/{total} " + ("уже есть" if state == "skipped" else f"{index:03d}")
+        if sys.stdout.isatty():
+            print(f"\r{line}          ", end="", flush=True)
+        else:
+            print(line)
+
     if chapter.external_url:
         print(f"Глава {label} лежит вне MangaDex: {chapter.external_url}")
         return DownloadResult(failed=1)
@@ -790,23 +836,23 @@ def download_chapter(
     result = DownloadResult()
     total = len(filenames)
     for index, filename in enumerate(filenames, 1):
+        if should_stop and should_stop():
+            raise Cancelled()
         suffix = Path(filename).suffix or ".img"
         target = destination / f"{index:03d}{suffix}"
         if target.exists() and target.stat().st_size > 0 and not force:
             result.skipped += 1
-            line = f"  {index}/{total} уже есть"
-            if sys.stdout.isatty():
-                print(f"\r{line}          ", end="", flush=True)
-            else:
-                print(line)
+            report_page(index, total, "skipped")
             continue
         saved = False
         for _attempt in range(3):
+            if should_stop and should_stop():
+                raise Cancelled()
             base = str(server["baseUrl"]).rstrip("/")
             chapter_hash = server["chapter"]["hash"]
             current_name = filename
             url = f"{base}/{quality}/{chapter_hash}/{quote(current_name)}"
-            ok, data, headers, elapsed = client.fetch_image(url)
+            ok, data, headers, elapsed = client.fetch_image(url, should_stop)
             client.report(url, ok, len(data), elapsed, cached_header(headers))
             if ok:
                 partial = target.with_suffix(target.suffix + ".part")
@@ -814,24 +860,22 @@ def download_chapter(
                 partial.replace(target)
                 result.downloaded += 1
                 saved = True
-                if sys.stdout.isatty():
-                    print(f"\r  {index}/{total} {target.name}          ", end="", flush=True)
-                else:
-                    print(f"  {index}/{total} {target.name}")
+                report_page(index, total, "saved")
                 break
             server = client.at_home(chapter.id)
             refreshed = list((server.get("chapter") or {}).get(file_key) or [])
             if len(refreshed) == total:
                 filename = refreshed[index - 1]
         if not saved:
-            print(f"\nГлава {label}, страница {index}: не скачалась")
             result.failed += 1
-    if sys.stdout.isatty():
+            report_page(index, total, "failed")
+    if on_page is None and sys.stdout.isatty():
         print()
-    print(
-        f"Глава {label}: новых {result.downloaded}, "
-        f"уже было {result.skipped}, ошибок {result.failed} → {destination}"
-    )
+    if on_page is None:
+        print(
+            f"Глава {label}: новых {result.downloaded}, "
+            f"уже было {result.skipped}, ошибок {result.failed} → {destination}"
+        )
     return result
 
 
@@ -940,6 +984,7 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "примеры:\n"
             "  python mangadex_dl.py\n"
+            "  python mangadex_dl.py --cli\n"
             '  python mangadex_dl.py "Ёцуба" -c 1 -l ru\n'
             '  python mangadex_dl.py "https://mangadex.org/title/UUID" -c 1-5 -l en\n'
             '  python mangadex_dl.py "https://mangadex.org/chapter/UUID"\n'
@@ -958,14 +1003,34 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list", action="store_true", help="показать главы и выйти")
     parser.add_argument("--force", action="store_true", help="скачать страницы заново")
     parser.add_argument("--pick", type=int, help="номер тайтла в результатах поиска, с 1")
-    parser.add_argument("--version", action="version", version="mangadex-dl 1.0.1")
+    parser.add_argument("--ui", action="store_true", help="открыть интерфейс в браузере")
+    parser.add_argument("--cli", action="store_true", help="спрашивать название и главы в терминале")
+    parser.add_argument("--version", action="version", version="mangadex-dl 1.1.0")
     return parser
+
+
+def wants_ui(args: argparse.Namespace) -> bool:
+    if args.cli:
+        return False
+    if args.ui:
+        return True
+    return (
+        args.target is None
+        and args.chapter is None
+        and args.volume is None
+        and args.pick is None
+        and not args.list
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     configure_stdio()
     args = build_parser().parse_args(argv)
     try:
+        if wants_ui(args):
+            from ui_server import serve
+
+            return serve()
         return run(args)
     except KeyboardInterrupt:
         print("\nОстановлено")
